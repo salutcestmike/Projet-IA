@@ -24,7 +24,6 @@ def getArgs():
     parser.add_argument(
         "-i", "--input_image",
         type=Path,
-        default=Path("data/dm3/HCT116-0Gy-3j-2900X-0002.dm3"),
         help="Chemin vers l'image DM3 à traiter."
     )
     parser.add_argument(
