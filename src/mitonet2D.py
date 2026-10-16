@@ -108,7 +108,7 @@ def _main():
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     files = list(sorted(file for pattern in ("*.dm3", "*.tif", "*.tiff") 
-                            for file in args.input_dir.glob(pattern)))[:3]
+                            for file in args.input_dir.glob(pattern)))
 
     if not files:
         raise FileNotFoundError(f"Aucun fichier DM3 ou TIFF trouvé dans {args.input_dir}")
