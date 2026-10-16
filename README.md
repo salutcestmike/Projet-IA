@@ -2,7 +2,9 @@
 
 ## Prérequis
 
-- Créer un environnement Python avec les dépendances du projet installées : notamment `numpy`, `tifffile`, `matplotlib`, `scipy`, `scikit-image`, `ncempy`, `torch`, `empanada`, `empanada-napari` et `imodmodel`. 
+- Créer un environnement Python avec les dépendances du projet installées, notamment:
+  - avec conda : `numpy`, `tifffile`, `matplotlib`, `scipy`, `scikit-image`, `ncempy`, `pytorch`,
+  - avec pip : `empanada`, `empanada-napari` et `imodmodel`. 
 - Lancer les commandes depuis la racine du projet.
 
 
