@@ -37,8 +37,7 @@ def convert_to_8bit_v1(image: np.ndarray) -> np.ndarray:
     if max_val == min_val:
         return np.zeros(image.shape, dtype=np.uint8)
 
-    # image_8bit = np.clip((image - min_val) / (max_val - min_val) * 255, 0, 255)
-    image_8bit = ((image).astype(np.float64) / 2**16) * 255
+    image_8bit = (image).astype(np.float64) / 256
 
     return image_8bit.astype(np.uint8)
 
