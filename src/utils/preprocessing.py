@@ -27,7 +27,7 @@ def load_image(path):
     image = image.astype(np.float32)
     return image
 
-def convert_to_8bit(image: np.ndarray) -> np.ndarray:
+def convert_to_8bit_v1(image: np.ndarray) -> np.ndarray:
     """Convertit une image en niveaux vers 8 bits."""
     image = image.astype(np.float32)
 
@@ -38,10 +38,26 @@ def convert_to_8bit(image: np.ndarray) -> np.ndarray:
         return np.zeros(image.shape, dtype=np.uint8)
 
     # image_8bit = np.clip((image - min_val) / (max_val - min_val) * 255, 0, 255)
-    image_8bit = image / 255
+    image_8bit = ((image).astype(np.float64) / 2**16) * 255
 
     return image_8bit.astype(np.uint8)
 
+def convert_to_8bit_v2(image: np.ndarray) -> np.ndarray:
+    """
+    Convertit une image en niveaux vers 8 bits en utilisant les percentiles 1 et 99 pour la normalisation.
+    Cette méthode est plus robuste aux valeurs aberrantes que la normalisation min-max.
+    """
+    image = image.astype(np.float32)
+
+    min_val, max_val = np.percentile(image, [1, 99])
+
+    if max_val <= min_val:
+        return np.zeros(image.shape, dtype=np.uint8)
+
+    image = (image - min_val) / (max_val - min_val)
+    image = np.clip(image, 0, 1)
+
+    return (image * 255).round().astype(np.uint8)
 
 def binarize_mask(mask):
     """Convertit un masque d'instances en masque binaire (0 ou 255)."""

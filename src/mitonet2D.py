@@ -107,8 +107,8 @@ def _main():
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
-    files = sorted(file for pattern in ("*.dm3", "*.tif", "*.tiff") 
-                            for file in args.input_dir.glob(pattern))
+    files = list(sorted(file for pattern in ("*.dm3", "*.tif", "*.tiff") 
+                            for file in args.input_dir.glob(pattern)))[:3]
 
     if not files:
         raise FileNotFoundError(f"Aucun fichier DM3 ou TIFF trouvé dans {args.input_dir}")
@@ -128,7 +128,7 @@ def _main():
 
         # Charge l'image DM3 ou TIFF
         image = preprocessing.load_image(path) 
-        image = preprocessing.convert_to_8bit(image)
+        image = preprocessing.convert_to_8bit_v1(image)
 
         print(
             f"Dimensions : {image.shape} | "
