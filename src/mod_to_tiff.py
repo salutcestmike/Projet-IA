@@ -2,7 +2,7 @@
 Script pour convertir des fichiers .mod en fichiers TIFF.
 """
 
-from src.utils.preprocessing import mod_to_tiff
+from utils.preprocessing import mod_to_tiff
 from pathlib import Path
 from argparse import ArgumentParser
 

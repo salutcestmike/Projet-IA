@@ -3,7 +3,7 @@ Segmentation d'images DM3 ou TIFF en utilisant MitoNet en mode 2D.
 """
 
 from pathlib import Path
-import src.utils.preprocessing as preprocessing
+import utils.preprocessing as preprocessing
 import argparse
 
 import numpy as np

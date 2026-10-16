@@ -2,13 +2,13 @@
 Script qui calcule plusieurs métriques statistiques entre plusieurs paires de masques binaires.
 """
 
-import src.utils.stats as stats 
+import utils.stats as stats 
 from pathlib import Path
 import numpy as np
 from argparse import ArgumentParser
 import tifffile
 import csv
-import src.utils.preprocessing as preprocessing
+import utils.preprocessing as preprocessing
 from tqdm import tqdm
 
 

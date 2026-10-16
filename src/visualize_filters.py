@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import tifffile
 from pathlib import Path
 
-import src.utils.preprocessing as preprocessing
+import utils.preprocessing as preprocessing
 from scipy.ndimage import median_filter, gaussian_filter
 from skimage import exposure, restoration
 
