@@ -14,6 +14,10 @@ from empanada.config_loaders import read_yaml
 from empanada_napari.inference import Engine2d
 from empanada_napari.utils import get_configs
 
+from tqdm import tqdm
+from scipy.ndimage import gaussian_filter
+from skimage import exposure
+
 
 def getArgs():
     parser = argparse.ArgumentParser(
@@ -75,7 +79,7 @@ def load_model(model_name, downsampling=1, use_quantized=True):
         nms_threshold=0.1,
         nms_kernel=3,
         confidence_thr=0.5,
-        use_gpu=False,
+        use_gpu=True if torch.cuda.is_available() else False,
         use_quantized=use_quantized,
     )
 
@@ -119,11 +123,12 @@ def _main():
         use_quantized=args.use_quantized
     )
 
-    for index, path in enumerate(files, start=1):
+    for index, path in tqdm(enumerate(files, start=1)):
         print(f"\n[{index}/{len(files)}] {path.name}")
 
         # Charge l'image DM3 ou TIFF
         image = preprocessing.load_image(path) 
+        image = preprocessing.convert_to_8bit(image)
 
         print(
             f"Dimensions : {image.shape} | "
