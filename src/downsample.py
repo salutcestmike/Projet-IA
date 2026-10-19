@@ -24,7 +24,7 @@ def getArgs():
         help="Dossier de sortie pour les fichiers TIFF convertis."
     )
     parser.add_argument(
-        "d", "--downsampling",
+        "-d", "--downsampling",
         type=int,
         default=2,
         help="Facteur de sous-échantillonnage pour l'inférence (1 = pas de sous-échantillonnage)."
