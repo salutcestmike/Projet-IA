@@ -121,3 +121,11 @@ def mod_to_tiff(mod_image_path, output_tiff_path = None):
         print(f"Masque enregistré : {output_tiff_path}")
 
     return mask
+
+
+def down_sample(image_path, output_path):
+    """Rééchantillonne une image à la moitié de sa taille selon un kernel de taille 2x2."""
+    image = load_image(image_path)
+    downsampled_image = image[::2, ::2]
+    tifffile.imwrite(output_path, downsampled_image)
+    print(f"Image rééchantillonnée enregistrée : {output_path}")
