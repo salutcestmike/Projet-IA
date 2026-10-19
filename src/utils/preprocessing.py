@@ -123,10 +123,10 @@ def mod_to_tiff(mod_image_path, output_tiff_path = None):
     return mask
 
 
-def down_sample(image_path, output_path):
-    """Rééchantillonne une image à la moitié de sa taille selon un kernel de taille 2x2."""
+def down_sample(image_path, output_path, downsampling=2):
+    """Rééchantillonne une image en réduisant sa taille par un facteur de sous-échantillonnage."""
     image = load_image(image_path)
-    downsampled_image = image[::2, ::2]
+    downsampled_image = image[::downsampling, ::downsampling]
     downsampled_image = convert_to_8bit_v2(downsampled_image)
     tifffile.imwrite(output_path, downsampled_image)
     print(f"Image rééchantillonnée enregistrée : {output_path}")
