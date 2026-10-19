@@ -5,6 +5,7 @@ Script pour convertir des fichiers .mod en fichiers TIFF.
 from utils.preprocessing import mod_to_tiff
 from pathlib import Path
 from argparse import ArgumentParser
+from tqdm import tqdm
 
 def getArgs():
     parser = ArgumentParser(
@@ -36,5 +37,5 @@ if __name__ == "__main__":
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for path in files:
-        mod_to_tiff(path, output_tiff_path=output_dir / f"{path.stem}_mod.tif")
+    for path in tqdm(files):
+        mod_to_tiff(path, output_tiff_path=output_dir / f"{path.stem}.tif")
