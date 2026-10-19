@@ -32,7 +32,7 @@ def getArgs():
     parser.add_argument(
         "-e", "--extension",
         type=str,
-        default=".tif",
+        default="tif",
         help="Extension des fichiers à traiter (par défaut : .tif)."
     )
 
