@@ -145,5 +145,5 @@ def down_sample(image_path, output_path=None, downsampling=2):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         tifffile.imwrite(output_path, downsampled_image)
         print(f"Image rééchantillonnée enregistrée : {output_path}")
-
+    #
     return downsampled_image
