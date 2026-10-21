@@ -135,10 +135,10 @@ def down_sample(image_path, output_path=None, downsampling=2):
     """Rééchantillonne une image en réduisant sa taille par un facteur de sous-échantillonnage."""
     image = load_image(image_path)
     if not np.any(image):
-        return np.zeros((image.shape[0] // downsampling, image.shape[1] // downsampling), dtype=np.uint8)
-    
-    downsampled_image = convert_to_8bit(image)
-    downsampled_image = downsampled_image[::downsampling, ::downsampling]
+        downsampled_image = np.zeros((image.shape[0] // downsampling, image.shape[1] // downsampling), dtype=np.uint8)
+    else:
+        downsampled_image = convert_to_8bit(image)
+        downsampled_image = downsampled_image[::downsampling, ::downsampling]
 
     if output_path:
         output_path = Path(output_path)
