@@ -11,7 +11,7 @@ from ncempy.io import dm
 
 from imodmodel import ImodModel
 from skimage.draw import polygon
-
+import tensorflow as tf
 
 def load_image(path):
     """Charge une image à partir d'un fichier DM3 ou TIFF.
@@ -27,36 +27,30 @@ def load_image(path):
     image = image.astype(np.float32)
     return image
 
-def convert_to_8bit_v1(image: np.ndarray) -> np.ndarray:
-    """Convertit une image en niveaux vers 8 bits."""
-    image = image.astype(np.float32)
 
-    min_val = image.min()
-    max_val = image.max()
+def normalize_image(image: np.ndarray, p_low=1.0, p_high=99.0, clip=True, eps=1e-8) -> np.ndarray:
+    """Normalise une image en niveaux de gris selon les percentiles p_low et p_high.
+    Si clip=True, les valeurs sont limitées à [0, 1]."""
+    img = np.asarray(image, dtype=np.float32)
+    lo, hi = np.percentile(img, [p_low, p_high])
+    out = (img - lo) / (hi - lo + eps)
+    return np.clip(out, 0.0, 1.0) if clip else out
 
-    if max_val == min_val:
-        return np.zeros(image.shape, dtype=np.uint8)
 
-    image_8bit = (image).astype(np.float64) / 256
+def convert_to_8bit(image, p_low=None, p_high=None):
+    """Convertit un tableau NumPy (uint16, float...) en uint8 [0, 255].
 
-    return image_8bit.astype(np.uint8)
-
-def convert_to_8bit_v2(image: np.ndarray) -> np.ndarray:
+    - p_low / p_high = None : étire entre le min et le max de l'image.
+    - sinon : étire entre ces percentiles (par ex. 1 et 99), valeurs extrêmes écrêtées.
     """
-    Convertit une image en niveaux vers 8 bits en utilisant les percentiles 1 et 99 pour la normalisation.
-    Cette méthode est plus robuste aux valeurs aberrantes que la normalisation min-max.
-    """
-    image = image.astype(np.float32)
+    img = np.asarray(image, dtype=np.float32)
+    if p_low is None or p_high is None:
+        lo, hi = img.min(), img.max()
+    else:
+        lo, hi = np.percentile(img, [p_low, p_high])
+    out = (img - lo) / (hi - lo + 1e-8)
+    return (np.clip(out, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
 
-    min_val, max_val = np.percentile(image, [1, 99])
-
-    if max_val <= min_val:
-        return np.zeros(image.shape, dtype=np.uint8)
-
-    image = (image - min_val) / (max_val - min_val)
-    image = np.clip(image, 0, 1)
-
-    return (image * 255).round().astype(np.uint8)
 
 def binarize_mask(mask):
     """Convertit un masque d'instances en masque binaire (0 ou 255)."""
@@ -123,10 +117,33 @@ def mod_to_tiff(mod_image_path, output_tiff_path = None):
     return mask
 
 
-def down_sample(image_path, output_path, downsampling=2):
+def resize_np(img, size, method="bilinear", antialias=False):
+    """Redimensionne un tableau NumPy (H, W) ou (H, W, C) avec tf.image.resize.
+    size = (new_h, new_w). Renvoie un tableau NumPy de même rang que l'entrée."""
+    img = np.asarray(img)
+    was_2d = img.ndim == 2
+    if was_2d:
+        img = img[..., None]                                   # (H, W) -> (H, W, 1)
+
+    out = tf.image.resize(img, size, method=method, antialias=antialias).numpy()
+
+    if was_2d:
+        out = out[..., 0]                                      # (h, w, 1) -> (h, w)
+    return out
+
+def down_sample(image_path, output_path=None, downsampling=2):
     """Rééchantillonne une image en réduisant sa taille par un facteur de sous-échantillonnage."""
     image = load_image(image_path)
-    downsampled_image = image[::downsampling, ::downsampling]
-    downsampled_image = convert_to_8bit_v2(downsampled_image)
-    tifffile.imwrite(output_path, downsampled_image)
-    print(f"Image rééchantillonnée enregistrée : {output_path}")
+    if not np.any(image):
+        return np.zeros((image.shape[0] // downsampling, image.shape[1] // downsampling), dtype=np.uint8)
+    
+    downsampled_image = convert_to_8bit(image)
+    downsampled_image = downsampled_image[::downsampling, ::downsampling]
+
+    if output_path:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        tifffile.imwrite(output_path, downsampled_image)
+        print(f"Image rééchantillonnée enregistrée : {output_path}")
+
+    return downsampled_image
