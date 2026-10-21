@@ -34,8 +34,8 @@ Projet-IA/
 ## Prérequis
 
 - Créer un environnement Python avec les dépendances du projet installées, notamment :
-  - avec conda : `numpy`, `tifffile`, `matplotlib`, `scipy`, `scikit-image`, `ncempy`, `tqdm`, `pytorch`,
-  - avec pip : `empanada`, `empanada-napari` et `imodmodel`.
+  - avec conda (en mettant l'option -c conda-forge) : `numpy`, `tifffile`, `matplotlib`, `scipy`, `imodmodel`, `ncempy`, `tqdm`, `keras`, `tensorflow`
+  - avec pip : `empanada`, `empanada-napari` et `scikit-image`.
 - Lancer **toutes** les commandes depuis la racine du projet. Les scripts s'exécutent directement par leur chemin, avec `python src/<script>.py`
 - Une connexion internet est nécessaire au premier lancement de `mitonet2D` pour télécharger les poids du modèle.
 
