@@ -20,8 +20,7 @@ TILE = 256
 TRAIN_STRIDE = 256    
 BATCH_SIZE = 16
 EPOCHS = 30
-VAL_FRACTION = 0.2    
-SEED = 42
+VAL_FRACTION = 0.2
 
 random.seed(SEED)
 np.random.seed(SEED)
