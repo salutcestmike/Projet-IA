@@ -37,3 +37,41 @@ def dice_coef(mask_pred, mask_ref):
     if total == 0:
         return 1.0
     return 2.0 * np.logical_and(mask_pred, mask_ref).sum() / total
+
+def calculate_metrics(y_pred, y_true):
+    """
+    Calcule l'IoU, la précision et le rappel pour une segmentation binaire.
+
+    Parameters
+    ----------
+    y_true : array-like
+        Masque de référence (ground truth).
+    y_pred : array-like
+        Masque prédit par le modèle.
+
+    Returns
+    -------
+    dict
+        IoU, précision et rappel.
+    """
+    # Convertir les masques en tableaux binaires
+    y_true = np.asarray(y_true) > 0
+    y_pred = np.asarray(y_pred) > 0
+
+    # Calculer les vrais positifs, faux positifs et faux négatifs
+    TP = np.sum(y_true & y_pred)
+    FP = np.sum(~y_true & y_pred)
+    FN = np.sum(y_true & ~y_pred)
+
+    # Calculer les métriques
+    iou = TP / (TP + FP + FN) if TP + FP + FN > 0 else 1.0
+    precision = TP / (TP + FP) if TP + FP > 0 else 0.0
+    recall = TP / (TP + FN) if TP + FN > 0 else 0.0
+    dice = dice_coef(y_pred, y_true)
+
+    return {
+        "IoU": iou,
+        "Precision": precision,
+        "Recall": recall,
+        "Dice": dice
+    }
