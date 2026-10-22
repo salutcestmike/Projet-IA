@@ -15,7 +15,8 @@ from pathlib import Path
 
 from sklearn.model_selection import train_test_split
 
-from utils.preprocessing import load_image, convert_to_8bit_v2, down_sample
+from utils.preprocessing import load_image, convert_to_8bit, down_sample
+from utils.stats import DiceCoefficient
 
 import h5py
 
@@ -275,6 +276,43 @@ def predict_and_save(model, image_list, output_dir, mask_list=None, threshold=0.
 
         print(f"{stem} | proba max : {proba.max():.3f} | mito prédit : {(proba > threshold).mean()*100:.2f} %{dice_str}")
 
+
+def plot_history(history, save_path):
+    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+    h = history.history if hasattr(history, "history") else history
+    epochs = np.arange(1, len(h["loss"]) + 1)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+
+    # Loss (la meilleure epoch = minimum de val_loss)
+    axes[0].plot(epochs, h["loss"], label="train")
+    axes[0].plot(epochs, h["val_loss"], label="val")
+    best = int(np.argmin(h["val_loss"]))
+    axes[0].axvline(best + 1, color="gray", linestyle="--", linewidth=1,
+                    label=f"meilleure val_loss (epoch {best + 1})")
+    axes[0].set_title("Loss")
+    axes[0].set_xlabel("epoch")
+    axes[0].set_ylabel("loss")
+    axes[0].legend()
+    axes[0].grid(alpha=0.3)
+
+    # Dice (la meilleure epoch = maximum de val_dice_mito)
+    axes[1].plot(epochs, h["dice_mito"], label="train")
+    axes[1].plot(epochs, h["val_dice_mito"], label="val")
+    best = int(np.argmax(h["val_dice_mito"]))
+    axes[1].axvline(best + 1, color="gray", linestyle="--", linewidth=1,
+                    label=f"meilleur val_dice = {h['val_dice_mito'][best]:.3f} (epoch {best + 1})")
+    axes[1].set_title("Dice")
+    axes[1].set_xlabel("epoch")
+    axes[1].set_ylabel("dice")
+    axes[1].set_ylim(0, 1)
+    axes[1].legend(loc="lower right")
+    axes[1].grid(alpha=0.3)
+
+    fig.tight_layout()
+    fig.savefig(save_path, dpi=150)
+    plt.close(fig)
+
 if __name__ == "__main__":
     args = get_args()
 
@@ -307,8 +345,9 @@ if __name__ == "__main__":
     unet.compile(
         optimizer=tf.keras.optimizers.Adam(1e-3),
         loss=ce_dice_loss,
-        metrics=[dice_mito]
+        metrics=[DiceCoefficient(name="dice_mito")]
     )
+    unet.summary()
 
     Path(args.weights_dir).mkdir(parents=True, exist_ok=True)
     callbacks = [
@@ -318,8 +357,12 @@ if __name__ == "__main__":
         ),
 
         tf.keras.callbacks.EarlyStopping(monitor="val_dice_mito", mode="max", patience=5, restore_best_weights=True),
+
     ]
-    unet.fit(train_ds, validation_data=val_ds, epochs=args.epochs, callbacks=callbacks)
+
+    history = unet.fit(train_ds, validation_data=val_ds, epochs=args.epochs, callbacks=callbacks)
+    
+    
 
     # unet.load_weights(args.weights_dir/"unet_mito_best_debug_fulldata.weights.h5")         # meilleur modèle selon le Dice mito en val
     _ = unet(tf.zeros((1, 256, 256, 1), dtype=tf.float32))
@@ -347,12 +390,12 @@ if __name__ == "__main__":
                 threshold=0.5
             )
 
-    
-    
 
-    # print("\n--- Évaluation Test ---")
-    # test_res = unet.evaluate(test_ds)
-    # print(f"Test Loss : {test_res[0]:.4f} | Test Dice Mito : {test_res[1]:.4f}")
+    print("\n Evaluation des performances sur le jeu de test :")
+    test_loss, test_dice = unet.evaluate(test_ds)
+    print(f"Test Loss : {test_loss:.4f} | Test Dice Mito : {test_dice:.4f}")
+
+    plot_history(history, args.output_dir/"history/training_curves.png")
     
 
     
