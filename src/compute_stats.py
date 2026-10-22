@@ -29,6 +29,7 @@ def getArgs():
     parser.add_argument(
         "-o", "--output_folder",
         type=Path,
+        default="",
         help="Dossier de sortie pour les résultats."
     )
 
@@ -84,5 +85,6 @@ if __name__ == "__main__":
                                  totals["Recall"],
                                  totals["FPR"],
                                  totals["Dice"]])
+            
     total = len(list(pred_folder.glob("*.tif")))
     print(f"Moyennes : IoU : {totals['IoU'] / total} |  Precision : {totals['Precision'] / total} | Recall : {totals['Recall'] / total} | FPR : {totals['FPR'] / total} | Dice : {totals['Dice'] / total} ")

@@ -92,7 +92,7 @@ def process_path(image_path, mask_path):
 
         img = load_image(image_path)
         if image_path.suffix.lower() == ".dm3":
-            img = convert_to_8bit_v2(img)
+            img = convert_to_8bit(img)
 
         mask = (load_image(mask_path) > 0).astype(np.float32)
         return img.astype(np.float32), mask
@@ -232,7 +232,7 @@ def predict_and_save(model, image_list, output_dir, mask_list=None, threshold=0.
         path_obj = Path(img_path)
         img = load_image(path_obj)
         if path_obj.suffix.lower() == ".dm3":
-            img = convert_to_8bit_v2(img)
+            img = convert_to_8bit(img)
             
         img = img.astype(np.float32)
         mean = np.mean(img)
