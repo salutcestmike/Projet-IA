@@ -62,6 +62,8 @@ def calculate_metrics(y_pred, y_true):
     TP = np.sum(y_true & y_pred)
     FP = np.sum(~y_true & y_pred)
     FN = np.sum(y_true & ~y_pred)
+    TN = np.sum(~y_true & ~y_pred)
+
 
     # Calculer les métriques
     iou = TP / (TP + FP + FN) if TP + FP + FN > 0 else 1.0
@@ -70,8 +72,9 @@ def calculate_metrics(y_pred, y_true):
     dice = dice_coef(y_pred, y_true)
 
     return {
-        "IoU": iou,
-        "Precision": precision,
-        "Recall": recall,
-        "Dice": dice
+        "IoU": float(iou),
+        "Precision": float(precision),
+        "Recall": float(recall),
+        "FPR" : float(FP / (FP + TN) if FP + TN > 0 else 0.0),
+        "Dice": float(dice)
     }

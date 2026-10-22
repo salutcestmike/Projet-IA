@@ -128,7 +128,7 @@ def _main():
 
         # Charge l'image DM3 ou TIFF
         image = preprocessing.load_image(path) 
-        image = preprocessing.convert_to_8bit_v1(image)
+        image = preprocessing.normalize_image(image)
 
         print(
             f"Dimensions : {image.shape} | "
