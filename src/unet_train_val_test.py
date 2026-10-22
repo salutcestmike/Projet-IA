@@ -224,17 +224,6 @@ def make_dataset(image_list, mask_list, batch_size=8, train=False, repeat=40, se
     # validation / test : images complètes, une à la fois
     return ds.batch(1).prefetch(tf.data.AUTOTUNE)
 
-def process_image_only(image_path):
-    def _load(image_path):
-        image_path = Path(image_path.numpy().decode("utf-8"))
-        img = load_image(image_path)
-        if image_path.suffix.lower() == ".dm3":
-            img = convert_to_8bit_v2(img)
-        return img.astype(np.float32)
-
-    img = tf.py_function(_load, [image_path], tf.float32)
-    return normalize(img)
-
 def predict_and_save(model, image_list, output_dir, mask_list=None, threshold=0.5, save_proba=False):
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
