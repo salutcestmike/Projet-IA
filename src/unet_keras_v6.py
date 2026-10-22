@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 # --------------------------------------------------------------------------- #
 input_dir = "data/dm3"
 target_dir = "data/mod_tiff"
-output_dir = Path("outputs/xception_run4")
+output_dir = Path("outputs/xception_run6")
 output_dir.mkdir(parents=True, exist_ok=True)
 
 img_size = (512, 512)
@@ -78,16 +78,6 @@ def load_img_masks(image_path, mask_path):
     mask = tf.image.resize(mask, img_size, method="nearest")     # reste uint8
     mask = tf.cast(mask, tf.uint8)
 
-    temp = mask_path.numpy().decode("utf-8")
-    output_path = Path("temp") / Path(temp).name
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-     mask = tf.py_function(
-        save_mask_numpy,
-        [mask, mask_path],
-        Tout=tf.uint8
-    )
     mask.set_shape([*img_size, 1])
 
     return img, mask
