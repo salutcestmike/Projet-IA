@@ -80,11 +80,11 @@ if __name__ == "__main__":
 
             print(f"{pred_file.name} : IoU : {stats_summary['IoU']} |  Precision : {stats_summary['Precision']} | Recall : {stats_summary['Recall']} | FPR : {stats_summary['FPR']} | Dice : {stats_summary['Dice']} \n")
             csv.writer.writerow([pred_file.name,
-                                 totals["IoU"], 
-                                 totals["Precision"],
-                                 totals["Recall"],
-                                 totals["FPR"],
-                                 totals["Dice"]])
+                                 stats_summary["IoU"], 
+                                 stats_summary["Precision"],
+                                 stats_summary["Recall"],
+                                 stats_summary["FPR"],
+                                 stats_summary["Dice"]])
             
     total = len(list(pred_folder.glob("*.tif")))
     print(f"Moyennes : IoU : {totals['IoU'] / total} |  Precision : {totals['Precision'] / total} | Recall : {totals['Recall'] / total} | FPR : {totals['FPR'] / total} | Dice : {totals['Dice'] / total} ")
