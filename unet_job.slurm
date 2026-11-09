@@ -31,6 +31,14 @@ echo "Python : $(which python)"
 python --version
 
 # Exécuter le script UNet
-python src/unet_keras_v6.py
+python unet_keras_template.py \
+    --input_dir ./data/dm3_downsample_8 \
+    --target_dir ./data/mod_tiff_downsample_8 \
+    --output_dir ./outputs/experiment_01 \
+    --batch_size 4 \
+    --seed 0 \
+    --max_epochs 100 \
+    --splits ./train_test_splits.csv \
+    --test_size 0.3
 
 echo "Fin du job : $(date)"

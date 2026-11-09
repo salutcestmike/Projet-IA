@@ -17,7 +17,6 @@ Les résultats sont comparés à des annotations manuelles faites sous **IMOD** 
    - [2. Segmenter avec MitoNet](#2-segmenter-avec-mitonet-avec-mitonet2dpy)
    - [3. Segmenter avec le U-Net](#3-segmenter-avec-le-u-net-avec-unet_keras_v4py)
    - [4. Évaluer les segmentations](#4-évaluer-les-segmentations-avec-compute_statspy)
-5. [Détails techniques](#détails-techniques)
 6. [Remarques et limitations connues](#remarques-et-limitations-connues)
 
 ## Structure du projet
@@ -92,7 +91,7 @@ annotations .mod ──► mod_to_tiff ──► masques de référence ──�
 
 ### 1. Convertir les annotations `.mod` en TIFF avec `mod_to_tiff.py`
 
-Les annotations manuelles réalisées sous IMOD sont converties en masques binaires TIFF (`0` / `255`). Ces masques servent de **vérité terrain** pour l'entraînement du U-Net et pour l'évaluation. Seuls les objets IMOD nommés `mitochondria` (insensible à la casse) sont pris en compte ; chaque contour est rempli comme un polygone, puis le masque est retourné verticalement pour correspondre à l'orientation des images.
+Les annotations manuelles réalisées sous IMOD sont converties en masques binaires TIFF (`0` / `255`). Ces masques servent de **vérité terrain** pour l'entraînement du U-Net et pour l'évaluation. Seuls les objets IMOD nommés `mitochondria` (insensible à la casse) sont pris en compte ; chaque contour est rempli comme un polygone.
 
 ```bash
 python src/mod_to_tiff.py -i data/mod -o data/mod_tiff
@@ -134,42 +133,60 @@ python src/mitonet2D.py \
 
 Les fichiers de sortie sont nommés `<nom_image>_seg.tif`. Le chargement initial du modèle peut prendre quelques minutes.
 
-### 3. Segmenter avec le U-Net avec `unet_keras_v4.py`
+### 3. Segmenter avec le U-Net avec `unet_keras.py`
 
 #### Description
 
-Exemple d'U-Net : `unet_keras_v4.py` entraîne un **U-Net 2D** (Keras/TensorFlow) pour la segmentation binaire des mitochondries (fond / mitochondrie), puis l'évalue et produit des prédictions. Un seul lancement exécute tout le pipeline :
+Exemple d'U-Net : `unet_keras_template.py` entraîne un **U-Net 2D** (Keras/TensorFlow) pour la segmentation binaire des mitochondries (fond / mitochondrie), puis l'évalue et produit des prédictions. Un seul lancement exécute tout le pipeline, avec la possibilité de charger un modèle :
 
-1. **Appariement** des images de `data/dm3` et des masques de `data/mod_tiff` par nom de base (les fichiers sans correspondant sont ignorés, avec un avertissement).
-2. **Prétraitement** : chargement, normalisation par les percentiles 1 et 99, redimensionnement à 512 × 512 (interpolation antialiasée pour les images, plus proche voisin pour les masques).
-3. **Découpage** aléatoire (graine `42`) en **70 % entraînement / 15 % validation / 15 % test**. Les indices sont sauvegardés dans `split_indices.npz`.
+1. **Appariement** des images de `data/dm3_tiff` et des masques de `data/mod_tiff` par nom de base (les fichiers sans correspondant sont ignorés, avec un avertissement).
+2. **Prétraitement** : chargement, normalisation par les percentiles 1 et 99, redimensionnement à 512 × 512 (interpolation antialiasée pour les images, plus proche voisin pour les masques). Paramètres modifiables.
+3. **Découpage** aléatoire (seed `0`) en **70 % entraînement et 30 % test**. Les indices sont sauvegardés dans `train_test_splits.csv`.
 4. **Augmentation** (entraînement uniquement) : flips horizontaux et verticaux, rotations de 0°/90°/180°/270°, légère variation de contraste et de luminosité, appliqués de façon identique à l'image et au masque.
-5. **Entraînement** avec :
+5. **Entraînement cross validation à 5 folds** avec :
    - une architecture U-Net à 4 niveaux (8 filtres au premier niveau, doublés à chaque niveau), avec du dropout (0,3) dans les deux niveaux les plus profonds, et une sortie softmax à 2 classes ;
-   - une perte combinée **entropie croisée + perte de Dice** (`ce_dice_loss`) ;
-   - l'optimiseur Adam, et les métriques exactitude et Dice ;
-   - trois callbacks : arrêt anticipé (patience de 8 epochs sur `val_loss`, restauration des meilleurs poids), sauvegarde du meilleur modèle et réduction du taux d'apprentissage sur plateau (facteur 0,5, patience de 3).
-6. **Évaluation** sur le jeu de test (perte, exactitude, Dice) puis **prédiction** de chaque image (seuil à 0,5) pour les images de test et pour toutes les images.
-7. **Courbes d'apprentissage** (perte et Dice, entraînement et validation) enregistrées en PNG.
+   - une loss combinée **cross entropy + loss de Dice** (`ce_dice_loss`) ;
+   - l'optimiseur Adam, et les métriques Accuracy et Dice ;
+   - trois callbacks : Early Stopping (patience de 8 epochs sur `val_loss`, restauration des meilleurs poids), sauvegarde du meilleur modèle et réduction du taux d'apprentissage lorsque le modèle stagne (facteur 0,5, patience de 3).
+6. **Évaluation** sur le jeu de test (Accuracy, Dice) puis **prédiction** de chaque image (seuil à 0,5) pour les images de test et pour toutes les images.
+7. **Courbes d'apprentissage** (Loss et Dice, entraînement et validation) enregistrées en PNG.
 
-#### Utilisation
+### Options disponibles
 
-Le script n'a **pas d'options en ligne de commande** : les paramètres se règlent directement en haut du fichier.
+| Option | Valeur par défaut | Description |
+|---|---|---|
+| `-i`, `--input_dir` | `./data/dm3_downsample_8` | Dossier des images |
+| `-m`, `--target_dir` | `./data/mod_tiff_downsample_8` | Dossier des masques |
+| `-p`, `--splits` | `None` | CSV de split existant |
+| `-o`, `--output_dir` | `./outputs/run_default` | Dossier de sortie |
+| `-b`, `--batch_size` | `4` | Taille des batches |
+| `-s`, `--seed` | `0` | Graine aléatoire |
+| `-e`, `--max_epochs` | `100` | Nombre maximal d'epochs par fold |
+| `-t`, `--test_size` | `0.3` | Proportion réservée au test lors de la création du split |
+| `-l`, `--load_model` | `None` | Chemin vers le modèle à charger à la place de l'entraînement |
 
-| Paramètre | Valeur par défaut | Rôle |
-| --- | --- | --- |
-| `input_dir` | `data/dm3` | dossier des images |
-| `target_dir` | `data/mod_tiff` | dossier des masques de référence |
-| `output_dir` | `outputs/xception_run6` | dossier de sortie (créé si besoin) |
-| `img_size` | `(512, 512)` | taille d'entrée du réseau |
-| `batch_size` | `4` | taille des lots (réduire en cas de manque de mémoire GPU) |
-| `epochs` | `100` | nombre maximal d'epochs (l'arrêt anticipé peut interrompre avant) |
-| `SEED` | `42` | graine du découpage et du mélange |
-
-Préparer d'abord les masques (étape 1), puis lancer depuis la racine du projet :
+Afficher l'aide :
 
 ```bash
-python src/unet_keras_v4.py
+python unet_keras_template.py --help
+```
+
+Si aucun chemin `--splits` n'est fourni, le script utilise `train_test_splits.csv`. Si ce fichier n'existe pas, une nouvelle séparation est créée et enregistrée à cet emplacement. Si un CSV est fourni et existe, il est réutilisé.
+
+Préparer d'abord les masques (étape 1), puis lancer depuis la racine du projet.
+
+### Exemple avec des paramètres personnalisés
+
+```bash
+python unet_keras_template.py \
+    --input_dir ./data/images \
+    --target_dir ./data/masks \
+    --output_dir ./outputs/experiment_01 \
+    --batch_size 4 \
+    --seed 0 \
+    --max_epochs 100 \
+    --splits ./train_test_splits.csv \
+    --test_size 0.3
 ```
 
 **Sur le cluster (SLURM)**, le script `unet_job.slurm` réserve 1 GPU, 16 CPU et 64 Go de mémoire pendant 10 h maximum. Créer le dossier de logs avant de soumettre le job :
@@ -179,25 +196,24 @@ mkdir -p logs
 sbatch unet_job.slurm
 ```
 
-Les sorties standard et d'erreur sont écrites dans `logs/projet_ia_maia_<id>.out` et `.err`. Adapter la ligne `python src/...` du fichier `.slurm` au script voulu (elle appelle actuellement `src/unet_keras_v6.py`, absent de ce dépôt).
+Les sorties standard et d'erreur sont écrites dans `logs/projet_ia_maia_<id>.out` et `.err`. Adapter la ligne `python src/...` du fichier `.slurm`.
 
 #### Résultats
 
-Dans `output_dir` (`outputs/xception_run6/` par défaut) :
+Dans `output_dir` (`outputs/run_default/` par défaut) :
 
 ```text
-outputs/xception_run6/
-├── best_model.keras        # meilleur modèle (minimum de val_loss)
-├── unet_final.keras        # modèle en fin d'entraînement
-├── split_indices.npz       # indices train / val / test
-├── training_curves.png     # courbes de perte et de Dice
-├── predictions/            # prédictions des images de TEST   : <nom>_pred.tif
-└── all_predictions/        # prédictions de TOUTES les images : <nom>_pred.tif
+outputs/run_default/
+├── unet_final.keras                 # modèle final
+├── unet_fold_<i>.keras              # modèle du fold <i> de cross validation
+├── cross_validation_curves.png      # courbes de Loss et de Dice
+├── predictions_test/                # prédictions des images de TEST   : <nom>_pred.tif
+└── predictions_all/                 # prédictions de TOUTES les images : <nom>_pred.tif
 ```
 
-Les masques prédits sont binaires (`0` / `255`). Le script affiche le Dice de chaque image et le Dice moyen. Pour obtenir toutes les métriques, utiliser ensuite `compute_stats.py` (étape 4) sur `predictions/` (images de test uniquement, à privilégier pour juger le modèle).
+Les masques prédits sont binaires (`0` / `255`). Le script affiche le Dice de chaque image et le Dice moyen. Pour obtenir toutes les métriques, utiliser ensuite `compute_stats.py` (étape 4) sur `predictions_test/` (images de test uniquement, à privilégier pour juger le modèle).
 
-> `all_predictions/` inclut les images d'entraînement et de validation : ses scores sont optimistes.
+> `predictions_all/` inclut les images d'entraînement et de test : ses scores sont optimistes.
 
 ### 4. Évaluer les segmentations avec `compute_stats.py`
 
@@ -234,23 +250,15 @@ Exemple pour évaluer le U-Net sur les images de test :
 
 ```bash
 python src/compute_stats.py \
-  -p outputs/xception_run6/predictions \
+  -p outputs/run_default/predictions_test \
   -r data/mod_tiff \
   -o outputs
 ```
 
-## Détails techniques
-
-- **Chargement** (`preprocessing.load_image`) : lit les `.dm3` via `ncempy` et les `.tif`/`.tiff` via `tifffile`, puis convertit en `float32`.
-- **Normalisation** (`preprocessing.normalize_image`) : étire l'intensité entre les percentiles 1 et 99 et écrête dans `[0, 1]` ; utilisée par MitoNet et par le U-Net.
-- **Conversion 8 bits** (`preprocessing.convert_to_8bit`) : étire entre le minimum et le maximum de l'image, ou entre deux percentiles si `p_low` et `p_high` sont fournis.
-- **Paramètres d'inférence MitoNet** (fixés dans `mitonet2D.py`) : seuil de confiance `0.5`, NMS avec seuil `0.1` et noyau `3`.
-- **Métrique Keras** (`stats.DiceCoefficient`) : Dice cumulé sur tout le jeu de données (et non moyenné par image), calculé sur la classe « mitochondrie ».
-- **Dice par image** : `stats.dice_coef`, après binarisation (`> 0`) des deux masques.
 
 ## Remarques et limitations connues
 
 - Les scripts ne parcourent pas les sous-dossiers : les images doivent être directement dans le dossier indiqué.
-- Les masques prédits et de référence doivent avoir la **même taille** pour que les métriques soient calculables. Les prédictions du U-Net sont en 512 × 512 : si les images d'origine ont une autre taille, `compute_stats.py` échouera sur ces fichiers (le calcul du Dice dans `unet_keras_v4.py` se fait, lui, sur les masques redimensionnés).
-- Dans `compute_stats.py`, le dossier de référence ne doit contenir que des masques (ou des `.mod`) : si une image brute portant le même nom de base s'y trouve, elle risque d'être appariée par erreur.
+- Les masques prédits et de référence doivent avoir la **même taille** pour que les métriques soient calculables. 
+- Dans `compute_stats.py`, le dossier de référence ne doit contenir que des masques : si une image brute portant le même nom de base s'y trouve, elle risque d'être appariée par erreur.
 - Vérifier visuellement les masques produits avant de les utiliser pour des analyses quantitatives.
