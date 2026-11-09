@@ -868,7 +868,7 @@ def main() -> None:
     args = parse_args()
     tf.keras.utils.set_random_seed(args.seed)
 
-    split_path = args.splits or Path("data/train_test_splits.csv")
+    split_path = args.splits or Path("train_test_splits.csv")
     if args.splits is None or not split_path.exists():
         create_train_test_split(
             args.input_dir,
