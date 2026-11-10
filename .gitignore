@@ -5,3 +5,4 @@ logs
 _*
 statistiques
 *.h5
+*.slurm
