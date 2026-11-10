@@ -161,30 +161,6 @@ def ce_dice_loss(y_true, y_pred, smooth=1.0):
     dice = (2.0 * inter + smooth) / (union + smooth)
     return ce + (1.0 - dice)
 
-@tf.keras.utils.register_keras_serializable(package="mito")
-def ce_tversky_loss(y_true, y_pred, alpha=0.7, beta=0.3, w_empty=5.0, smooth=1.0):
-    y_pred = tf.cast(y_pred, tf.float32)
-    if len(y_true.shape) == 4:
-        y_true = tf.squeeze(y_true, -1)
-    y_true = tf.cast(y_true, tf.int32)
-
-    ce = tf.reduce_mean(tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred))
-
-    t = tf.cast(y_true, tf.float32)
-    p = y_pred[..., 1]
-    tp = tf.reduce_sum(t * p)
-    fp = tf.reduce_sum((1.0 - t) * p)
-    fn = tf.reduce_sum(t * (1.0 - p))
-    tversky = 1.0 - (tp + smooth) / (tp + alpha * fp + beta * fn + smooth)
-
-    # pénalité : probabilité moyenne prédite sur les images sans mitochondrie
-    empty = 1.0 - tf.reduce_max(t, axis=[1, 2])                  # (B,) 1 si image vide
-    mean_p = tf.reduce_mean(p, axis=[1, 2])                      # (B,)
-    empty_pen = tf.reduce_sum(empty * mean_p) / (tf.reduce_sum(empty) + 1e-6)
-
-    return ce + tversky + w_empty * empty_pen
-
-
 
 def plot_history(history, save_path):
     h = history.history if hasattr(history, "history") else history

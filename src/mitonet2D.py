@@ -115,7 +115,6 @@ def _main():
 
     print(f"{len(files)} image(s) trouvée(s).")
     print(f"PyTorch : {torch.__version__}")
-    print("Calcul sur CPU.")
 
     model = load_model(
         model_name=args.model_name,
