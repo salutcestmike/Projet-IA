@@ -34,12 +34,12 @@ python --version
 python src/unet_keras_template.py \
     --input_dir ./data/dm3 \
     --target_dir ./data/mod_tiff \
-    --output_dir ./outputs/experiment_01 \
+    --output_dir ./outputs/experiment_02 \
     --batch_size 4 \
     --seed 0 \
     --max_epochs 100 \
     --splits ./train_test_splits.csv \
     --test_size 0.3 \
-    --d 8
+    --d 4
 
 echo "Fin du job : $(date)"

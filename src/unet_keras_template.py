@@ -27,7 +27,7 @@ import utils.stats as stats  # DiceCoefficient doit avoir name="dice"
 
 
 # Quatre opérations de pooling imposent des dimensions compatibles avec 2**4.
-IMG_SIZE = (512, 512) 
+IMG_SIZE = (4096, 4096) 
 N_SPLITS = 5
 INITIAL_LEARNING_RATE = 1e-3
 PATCH = 64
@@ -877,7 +877,12 @@ def main() -> None:
     entraîne le modèle final, évalue ses performances et sauvegarde les
     prédictions sur le jeu de test puis sur l'ensemble des images."""
     args = parse_args()
-    # tf.keras.utils.set_random_seed(args.seed)
+    tf.keras.utils.set_random_seed(args.seed)
+
+    global IMG_SIZE
+    print(f"Configuration : {args}")
+    print(f"Taille d'image : {IMG_SIZE} | Taille d'image après sous-échantillonnage : {IMG_SIZE[0] // args.downsampling}x{IMG_SIZE[1] // args.downsampling}")
+    IMG_SIZE = (IMG_SIZE[0] // args.downsampling, IMG_SIZE[1] // args.downsampling)
 
     split_path = args.splits or Path("train_test_splits.csv")
     if args.splits is None or not split_path.exists():
