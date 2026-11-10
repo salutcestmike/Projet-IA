@@ -179,11 +179,24 @@ def ce_dice_loss(y_true, y_pred, ce_weight=0.5, dice_weight=0.5, mito_weight=2.0
 
     return ce_weight * ce + dice_weight * dice_loss(y_true, y_pred)
 
-def dice_mito(y_true, y_pred):
-    y_true = tf.cast(tf.reshape(y_true, tf.shape(y_pred)[:-1]), tf.float32)
-    pred = tf.cast(tf.argmax(y_pred, axis=-1), tf.float32)
-    inter = tf.reduce_sum(y_true * pred)
-    return (2 * inter + 1e-6) / (tf.reduce_sum(y_true) + tf.reduce_sum(pred) + 1e-6)
+# def dice_mito(y_true, y_pred):
+#     y_true = tf.cast(tf.reshape(y_true, tf.shape(y_pred)[:-1]), tf.float32)
+#     pred = tf.cast(tf.argmax(y_pred, axis=-1), tf.float32)
+#     inter = tf.reduce_sum(y_true * pred)
+#     return (2 * inter + 1e-6) / (tf.reduce_sum(y_true) + tf.reduce_sum(pred) + 1e-6)
+
+def dice_mito(y_true, y_pred, eps=1e-6):
+    # y_true : (B,H,W) ou (B,H,W,1), y_pred : (B,H,W,2) softmax
+    y_true = tf.reshape(y_true, tf.shape(y_pred)[:-1])
+    y_true = tf.cast(y_true > 0, tf.int32)                       # 0 ou 1
+    pred = tf.cast(tf.equal(tf.argmax(y_pred, axis=-1), 1), tf.int32)   # 0 ou 1
+
+    inter = tf.reduce_sum(y_true * pred)                         # int32
+    total = tf.reduce_sum(y_true) + tf.reduce_sum(pred)          # int32
+
+    inter = tf.cast(inter, tf.float32)
+    total = tf.cast(total, tf.float32)
+    return (2.0 * inter + eps) / (total + eps)
 
 PATCH = 256
 

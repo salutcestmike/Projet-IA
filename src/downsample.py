@@ -1,5 +1,5 @@
 """
-Script pour convertir des fichiers .mod en fichiers TIFF.
+Script pour downsample des images.
 """
 
 from utils.preprocessing import down_sample
@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 def getArgs():
     parser = ArgumentParser(
-        description="Convertit des fichiers .mod en fichiers TIFF."
+        description="Downsample les images."
     )
     parser.add_argument(
         "-i", "--input_dir",
