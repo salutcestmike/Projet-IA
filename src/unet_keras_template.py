@@ -27,7 +27,7 @@ import utils.stats as stats  # DiceCoefficient doit avoir name="dice"
 
 
 # Quatre opérations de pooling imposent des dimensions compatibles avec 2**4.
-IMG_SIZE = (512, 512) 
+IMG_SIZE = (4096, 4096) 
 N_SPLITS = 5
 INITIAL_LEARNING_RATE = 1e-3
 PATCH = 64
@@ -96,6 +96,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="Charger un modèle au lieu de l'entraîner.",
+    )
+    parser.add_argument(
+        "-d", "--downsampling",
+        type=int,
+        default=8,
+        help="Facteur de sous-échantillonnage pour l'inférence (1 = pas de sous-échantillonnage).",
     )
     
 
@@ -267,7 +273,7 @@ def load_train_test_paths(input_dir: Union[str, Path], target_dir: Union[str, Pa
 # ---------------------------------------------------------------------------
 # Chargement et préparation des données
 # ---------------------------------------------------------------------------
-def _load_pair_numpy(image_path: tf.Tensor, mask_path: tf.Tensor) -> Tuple[np.ndarray, np.ndarray]:
+def _load_pair_numpy(image_path: tf.Tensor, mask_path: tf.Tensor, downsampling: int) -> Tuple[np.ndarray, np.ndarray]:
     """Charge et prépare une paire image/masque avec NumPy.
 
     Cette fonction est appelée depuis ``tf.py_function`` : les chemins reçus
@@ -276,6 +282,7 @@ def _load_pair_numpy(image_path: tf.Tensor, mask_path: tf.Tensor) -> Tuple[np.nd
     Args:
         image_path (tf.Tensor): Chemin encodé de l'image à charger.
         mask_path (tf.Tensor): Chemin encodé du masque de référence.
+        downsampling (int): Facteur de sous-échantillonnage.
 
     Returns:
         Tuple[np.ndarray, np.ndarray]: Image normalisée en float32 et masque
@@ -287,13 +294,13 @@ def _load_pair_numpy(image_path: tf.Tensor, mask_path: tf.Tensor) -> Tuple[np.nd
     image_path = Path(image_path.numpy().decode("utf-8"))
     mask_path = Path(mask_path.numpy().decode("utf-8"))
 
-    image = preprocessing.load_image(image_path)
+    image = preprocessing.down_sample(image_path, downsampling=downsampling)
     image = preprocessing.normalize_image(image)
     image = np.asarray(image, dtype=np.float32)
     if image.ndim == 2:
         image = image[..., None]
 
-    mask = preprocessing.load_image(mask_path)
+    mask = preprocessing.down_sample(mask_path, downsampling=downsampling)
     mask = (np.asarray(mask) > 0).astype(np.uint8)
     if mask.ndim == 2:
         mask = mask[..., None]
@@ -311,7 +318,7 @@ def _load_pair_numpy(image_path: tf.Tensor, mask_path: tf.Tensor) -> Tuple[np.nd
     return image, mask
 
 
-def load_img_masks(image_path: tf.Tensor, mask_path: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
+def load_img_masks(image_path: tf.Tensor, mask_path: tf.Tensor, downsampling: int) -> Tuple[tf.Tensor, tf.Tensor]:
     """Charge une paire image/masque et la redimensionne à ``IMG_SIZE``.
 
     L'image est interpolée bilinéairement, tandis que le masque utilise le plus
@@ -320,13 +327,14 @@ def load_img_masks(image_path: tf.Tensor, mask_path: tf.Tensor) -> Tuple[tf.Tens
     Args:
         image_path (tf.Tensor): Chemin TensorFlow de l'image.
         mask_path (tf.Tensor): Chemin TensorFlow du masque.
+        downsampling (int): Facteur de sous-échantillonnage.
 
     Returns:
         Tuple[tf.Tensor, tf.Tensor]: Image float32 normalisée et masque uint8,
             de forme (IMG_SIZE[0], IMG_SIZE[1], 1)."""
     image, mask = tf.py_function(
         _load_pair_numpy,
-        [image_path, mask_path],
+        [image_path, mask_path, downsampling],
         Tout=[tf.float32, tf.uint8],
     )
     image.set_shape([None, None, 1])
@@ -421,7 +429,7 @@ def augment(image: tf.Tensor, mask: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
     return image, mask
 
 
-def make_dataset(image_paths: List[str], mask_paths: List[str], batch_size: int, training: bool = False, seed: int = 0) -> tf.data.Dataset:
+def make_dataset(image_paths: List[str], mask_paths: List[str], downsampling: int, batch_size: int, training: bool = False, seed: int = 0) -> tf.data.Dataset:
     """Construit un pipeline ``tf.data`` à partir de chemins appariés.
 
     En mode entraînement, les paires sont mélangées et augmentées. Dans tous les
@@ -430,6 +438,7 @@ def make_dataset(image_paths: List[str], mask_paths: List[str], batch_size: int,
     Args:
         image_paths (List[str]): Chemins des images.
         mask_paths (List[str]): Chemins des masques correspondants.
+        downsampling (int): Facteur de sous-échantillonnage.
         batch_size (int): Nombre d'échantillons par batch.
         training (bool): Active le mélange et l'augmentation si vrai.
         seed (int): Graine du mélange des données.
@@ -452,7 +461,7 @@ def make_dataset(image_paths: List[str], mask_paths: List[str], batch_size: int,
             reshuffle_each_iteration=True,
         )
 
-    dataset = dataset.map(load_img_masks, num_parallel_calls=tf.data.AUTOTUNE)
+    dataset = dataset.map(lambda img, mask: load_img_masks(img, mask, downsampling), num_parallel_calls=tf.data.AUTOTUNE)
     if training:
         dataset = dataset.map(augment, num_parallel_calls=tf.data.AUTOTUNE)
 
@@ -679,6 +688,7 @@ def run_cross_validation(train_images: List[str], train_masks: List[str], args: 
             batch_size=args.batch_size,
             training=True,
             seed=args.seed + fold,
+            downsampling=args.downsampling
         )
         fold_val_dataset = make_dataset(
             image_paths[val_indices].tolist(),
@@ -686,6 +696,7 @@ def run_cross_validation(train_images: List[str], train_masks: List[str], args: 
             batch_size=args.batch_size,
             training=False,
             seed=args.seed,
+            downsampling=args.downsampling
         )
 
         model = compile_model()
@@ -868,6 +879,11 @@ def main() -> None:
     args = parse_args()
     tf.keras.utils.set_random_seed(args.seed)
 
+    global IMG_SIZE
+    print(f"Configuration : {args}")
+    print(f"Taille d'image : {IMG_SIZE} | Taille d'image après sous-échantillonnage : {IMG_SIZE[0] // args.downsampling}x{IMG_SIZE[1] // args.downsampling}")
+    IMG_SIZE = (IMG_SIZE[0] // args.downsampling, IMG_SIZE[1] // args.downsampling)
+
     split_path = args.splits or Path("train_test_splits.csv")
     if args.splits is None or not split_path.exists():
         create_train_test_split(
@@ -901,6 +917,7 @@ def main() -> None:
         batch_size=args.batch_size,
         training=True,
         seed=args.seed,
+        downsampling=args.downsampling
     )
     test_dataset = make_dataset(
         test_images,
@@ -908,6 +925,7 @@ def main() -> None:
         batch_size=args.batch_size,
         training=False,
         seed=args.seed,
+        downsampling=args.downsampling
     )
 
     if not args.load_model:
@@ -949,6 +967,7 @@ def main() -> None:
         batch_size=args.batch_size,
         training=False,
         seed=args.seed,
+        downsampling=args.downsampling
     )
     save_predictions(
         final_model,
