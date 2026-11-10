@@ -27,7 +27,7 @@ import utils.stats as stats  # DiceCoefficient doit avoir name="dice"
 
 
 # Quatre opérations de pooling imposent des dimensions compatibles avec 2**4.
-IMG_SIZE = (512, 512)
+IMG_SIZE = (512, 512) 
 N_SPLITS = 5
 INITIAL_LEARNING_RATE = 1e-3
 PATCH = 64
@@ -41,13 +41,13 @@ def parse_args() -> argparse.Namespace:
     Returns:
         Arguments validés. Le dossier de sortie est créé s'il n'existe pas."""
     parser = argparse.ArgumentParser(
-        description="Segmente des images TIFF avec un modèle U-Net."
+        description="Segmente des images TIFF ou DM3 avec un modèle U-Net."
     )
     parser.add_argument(
         "-i", "--input_dir",
         type=Path,
         default=Path("./data/dm3_downsample_8"),
-        help="Dossier contenant les images TIFF.",
+        help="Dossier contenant les images TIFF ou DM3.",
     )
     parser.add_argument(
         "-m", "--target_dir",

@@ -178,7 +178,7 @@ Préparer d'abord les masques (étape 1), puis lancer depuis la racine du projet
 ### Exemple avec des paramètres personnalisés
 
 ```bash
-python unet_keras_template.py \
+python src/unet_keras_template.py \
     --input_dir ./data/images \
     --target_dir ./data/masks \
     --output_dir ./outputs/experiment_01 \
